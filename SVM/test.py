@@ -19,7 +19,7 @@ class SVM:
 
   def prepare_data(self):
     # Load the iris dataset
-    self.train, self.test = train_test_split(self.iris, test_size=0.2, random_state=50)
+    self.train, self.test = train_test_split(self.iris, test_size=0.2, random_state=0)
 
     self.total_intances = len(self.train)
 
@@ -43,6 +43,12 @@ class SVM:
     # calculamos el total de instancias positivas
     N = len(data.loc[data[target] == 1])
 
+    # Impirmimos los vecotres + y - y final
+    table = pt.PrettyTable()
+    table.field_names = ['Vector de soporte', 'Vector +', 'Vector -', 'Vector final']
+    table.add_row([target, vector1, vector2, c])
+    print(table)
+
     return c, N
 
   def predict(self, data_to_predict):
@@ -57,9 +63,16 @@ class SVM:
     projection3 = np.dot(data_to_predict, self.ci[2]) / norm3
 
     # calculamos la probabilidad de pertenencia a cada clase
-    prob1 = projection1 * self.Ni[0] / self.total_intances
-    prob2 = projection2 * self.Ni[1] / self.total_intances
-    prob3 = projection3 * self.Ni[2] / self.total_intances
+    prob1 = (projection1 > norm1) * self.Ni[0] / self.total_intances
+    prob2 = (projection2 > norm2) * self.Ni[1] / self.total_intances
+    prob3 = (projection3 > norm3) * self.Ni[2] / self.total_intances
+
+    # Mostramos las probabilidades
+    table = pt.PrettyTable()
+    table.field_names = ['Index','P1','P2','P3','Prob Setosa', 'Prob Versicolor', 'Prob Virginica']
+    for i in range(len(data_to_predict)):
+      table.add_row([i, projection1[i], projection2[i], projection3[i], prob1[i], prob2[i], prob3[i]])
+    print(table)
 
     results = []
 
@@ -69,8 +82,10 @@ class SVM:
         results.append('Iris-setosa')
       elif prob2[i] > prob1[i] and prob2[i] > prob3[i]:
         results.append('Iris-versicolor')
-      else:
+      elif prob3[i] > prob1[i] and prob3[i] > prob2[i]:
         results.append('Iris-virginica')
+      else:
+        results.append('Undefined')
 
     return results
 
@@ -81,6 +96,15 @@ class SVM:
     c3, N3 = self.svm(self.train, 'Iris-virginica')
     self.ci = [c1, c2, c3]
     self.Ni = [N1, N2, N3]
+
+  def __to_string__(self):
+    table = pt.PrettyTable()
+    # Mostramos el total por clase (Ni) y el total de valores (total_intances)
+    table.field_names = ['Clase', 'Total de instancias de esta clase', 'Total de instancias']
+    table.add_row(['Iris-setosa', self.Ni[0], self.total_intances])
+    table.add_row(['Iris-versicolor', self.Ni[1], self.total_intances])
+    table.add_row(['Iris-virginica', self.Ni[2], self.total_intances])
+    return table
 
 
 if __name__ == '__main__':
@@ -98,10 +122,14 @@ if __name__ == '__main__':
     table.add_row([species_true[i], species_pred[i]])
   print(table)
 
+  print("Vectores")
+  print(svm.__to_string__())
+
   print(classification_report(species_true, species_pred))
 
   # Matriz de confusión
   cm = confusion_matrix(species_true, species_pred)
-  disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=['Setosa', 'Versicolor', 'Virginica'])
+  print(cm)
+  disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=['Setosa', 'Versicolor', 'Virginica', 'Undefined'])
   disp.plot()
   plt.show()
