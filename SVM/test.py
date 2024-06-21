@@ -9,7 +9,7 @@ import prettytable as pt
 
 class SVM:
   def __init__(self, filename = 'iris.csv'):
-    self.iris = pd.read_csv(filename)
+    self.iris = pd.read_csv(filename, index_col=False)
     self.train = None
     self.test = None
     self.total_intances = 0
@@ -19,7 +19,7 @@ class SVM:
 
   def prepare_data(self):
     # Load the iris dataset
-    self.train, self.test = train_test_split(self.iris, test_size=0.2, random_state=0)
+    self.train, self.test = train_test_split(self.iris, test_size=0.2, shuffle=True, random_state=0)
 
     self.total_intances = len(self.train)
 
@@ -52,6 +52,8 @@ class SVM:
     return c, N
 
   def predict(self, data_to_predict):
+    species = data_to_predict['species']
+    data_to_predict = data_to_predict[['sepal_length', 'sepal_width', 'petal_length', 'petal_width']]
     # Calculamos la norma de los vectores de pesos
     norm1 = np.linalg.norm(self.ci[0])
     norm2 = np.linalg.norm(self.ci[1])
@@ -63,9 +65,9 @@ class SVM:
     projection3 = np.dot(data_to_predict, self.ci[2]) / norm3
 
     # calculamos la probabilidad de pertenencia a cada clase
-    prob1 = (projection1 > norm1) * self.Ni[0] / self.total_intances
-    prob2 = (projection2 > norm2) * self.Ni[1] / self.total_intances
-    prob3 = (projection3 > norm3) * self.Ni[2] / self.total_intances
+    prob1 =  np.where(species == 'Iris-setosa', (projection1 < norm1), (projection1 > norm1)).astype(float) * self.Ni[0] / self.total_intances
+    prob2 = np.where(species == 'Iris-setosa', (projection2 < norm1), (projection2 > norm1)).astype(float) * self.Ni[1] / self.total_intances
+    prob3 = np.where(species == 'Iris-virginica', (projection3 < norm1), (projection3 > norm1)).astype(float) * self.Ni[2] / self.total_intances
 
     # Mostramos las probabilidades
     table = pt.PrettyTable()
@@ -110,7 +112,7 @@ class SVM:
 if __name__ == '__main__':
   svm = SVM()
   svm.fit()
-  species_pred = svm.predict(svm.test[['sepal_length', 'sepal_width', 'petal_length', 'petal_width']])
+  species_pred = svm.predict(svm.test[['sepal_length', 'sepal_width', 'petal_length', 'petal_width', 'species']])
   species_true = (svm.test['species']).to_list()
 
   print('Accuracy: ', accuracy_score(species_true, species_pred))
